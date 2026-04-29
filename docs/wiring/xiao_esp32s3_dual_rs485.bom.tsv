@@ -1,0 +1,9 @@
+Id	Description	Qty	Unit	Designators
+1	Cable, 2 x 26 AWG	0.18	m	BMS_PAIR, CTRL_PAIR, PWR_IN
+2	Cable, 2 x 28 AWG	0.08	m	RX_PWR, TX_PWR
+3	Cable, 3 x 28 AWG	0.08	m	RX_UART, TX_UART
+4	Connector, 3.3V SP3485 RS485 breakout, BMS-side receiver, 8 pins	1		RX485
+5	Connector, 3.3V SP3485 RS485 breakout, controller-side transmitter, 8 pins	1		TX485
+6	Connector, OneWheel BMS-side harness, cut wire stubs, 4 pins	1		BMS
+7	Connector, OneWheel controller-side harness, cut wire stubs, 2 pins	1		CTRL
+8	Connector, Seeed Studio XIAO ESP32-S3, controller, 5 pins	1		XIAO

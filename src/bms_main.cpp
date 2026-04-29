@@ -10,9 +10,24 @@
 // UART RX is connected to the *BMS* White line
 // UART TX is connected to the *MB* White line
 // TX_INPUT_PIN must be soldered to the UART TX
+#if defined(ARDUINO_ARCH_ESP32)
+#ifndef BMS_UART_RX_PIN
+#define BMS_UART_RX_PIN 44
+#endif
+#ifndef BMS_UART_TX_PIN
+#define BMS_UART_TX_PIN 43
+#endif
+#ifndef TX_INPUT_PIN
+#define TX_INPUT_PIN BMS_UART_TX_PIN
+#endif
+#ifndef TX_INVERSE_OUT_PIN
+#define TX_INVERSE_OUT_PIN 6
+#endif
+#else
 #define TX_INPUT_PIN 4
 // Connected to the MB B line
 #define TX_INVERSE_OUT_PIN 5
+#endif
 
 namespace {
 
@@ -24,27 +39,38 @@ void IRAM_ATTR txPinFallInterrupt() { digitalWrite(TX_INVERSE_OUT_PIN, 1); }
 #ifdef NO_GLOBAL_INSTANCES
 HardwareSerial Serial(0);
 #endif
+#if defined(ARDUINO_ARCH_ESP32)
+HardwareSerial BmsSerial(1);
+#else
+HardwareSerial &BmsSerial = Serial;
+#endif
 }  // namespace
 
 BmsRelay *relay;
 
 void bms_setup() {
-  relay = new BmsRelay([]() { return Serial.read(); },
+  relay = new BmsRelay([]() { return BmsSerial.read(); },
                        [](uint8_t b) {
                          // This if statement is what implements locking.
                          if (!Settings->is_locked) {
-                           Serial.write(b);
+                           BmsSerial.write(b);
                          }
                        },
                        millis);
-  Serial.begin(115200);
+#if defined(ARDUINO_ARCH_ESP32)
+  BmsSerial.begin(115200, SERIAL_8N1, BMS_UART_RX_PIN, BMS_UART_TX_PIN);
+#else
+  BmsSerial.begin(115200);
+#endif
 
   // The B line idle is 0
   digitalWrite(TX_INVERSE_OUT_PIN, 0);
   pinMode(TX_INVERSE_OUT_PIN, OUTPUT);
 
   pinMode(TX_INPUT_PIN, INPUT);
+#ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
+#endif
 
   attachInterrupt(digitalPinToInterrupt(TX_INPUT_PIN), txPinRiseInterrupt,
                   RISING);
@@ -52,9 +78,11 @@ void bms_setup() {
                   FALLING);
 
   relay->addReceivedPacketCallback([](BmsRelay *, Packet *packet) {
+#ifdef LED_BUILTIN
     static uint8_t ledState = 0;
     digitalWrite(LED_BUILTIN, ledState);
     ledState = 1 - ledState;
+#endif
     streamBMSPacket(packet->start(), packet->len());
   });
   relay->setUnknownDataCallback([](uint8_t b) {

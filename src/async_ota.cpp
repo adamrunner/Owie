@@ -1,10 +1,17 @@
 #include "async_ota.h"
 
 #include <Arduino.h>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <Update.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
+#include <Updater.h>
+#endif
 
 #include "ESPAsyncWebServer.h"
 #include "data.h"
+#if defined(ARDUINO_ARCH_ESP8266)
 #include "flash_hal.h"
+#endif
 #include "settings.h"
 
 namespace {
@@ -79,11 +86,15 @@ void AsyncOtaClass::listen(AsyncWebServer *server) {
             return request->send(400, "text/plain", "MD5 parameter invalid");
           }
 
+#if defined(ARDUINO_ARCH_ESP8266)
           Update.runAsync(true);
           uint32_t maxSketchSpace =
               (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
           if (!Update.begin(maxSketchSpace,
                             U_FLASH)) {  // Start with max available size
+#else
+          if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+#endif
             respondToOtaPostRequest(request);
           }
           this->startCallback_();

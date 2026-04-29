@@ -1,0 +1,164 @@
+metadata:
+  title: Owie XIAO ESP32-S3 Dual RS485 Wiring
+  notes: |
+    Uses two 3.3V SP3485 RS485 breakout boards, one permanently enabled as
+    receiver on the BMS-side pair and one permanently enabled as transmitter on
+    the controller-side pair. Assumes OneWheel white is RS485 A/non-inverting
+    and green is RS485 B/inverting; swap A/B on a pair if the logic analyzer
+    shows inverted or undecodable UART data.
+
+connectors:
+  XIAO:
+    type: Seeed Studio XIAO ESP32-S3
+    subtype: controller
+    pinlabels:
+      - 5V
+      - GND
+      - 3V3
+      - D7 / GPIO44 / UART RX
+      - D6 / GPIO43 / UART TX
+    notes: GPIO6 / D5 is not used when RS485 transceivers are installed.
+
+  BMS:
+    type: OneWheel BMS-side harness
+    subtype: cut wire stubs
+    pinlabels:
+      - 5V from BMS
+      - GND from BMS
+      - White / RS485 A from BMS
+      - Green / RS485 B from BMS
+
+  CTRL:
+    type: OneWheel controller-side harness
+    subtype: cut wire stubs
+    pinlabels:
+      - White / RS485 A to controller
+      - Green / RS485 B to controller
+
+  RX485:
+    type: 3.3V SP3485 RS485 breakout
+    subtype: BMS-side receiver
+    pinlabels:
+      - VCC
+      - GND
+      - RO
+      - /RE
+      - DE
+      - DI
+      - A
+      - B
+    notes: Tie /RE low and DE low for receive-only mode.
+
+  TX485:
+    type: 3.3V SP3485 RS485 breakout
+    subtype: controller-side transmitter
+    pinlabels:
+      - VCC
+      - GND
+      - RO
+      - /RE
+      - DE
+      - DI
+      - A
+      - B
+    notes: Tie /RE high and DE high for transmit-only mode.
+
+cables:
+  PWR_IN:
+    wirecount: 2
+    length: 0.08
+    gauge: 26 AWG
+    colors: [RD, BK]
+    notes: Board power from the BMS power pickup.
+
+  RX_PWR:
+    wirecount: 2
+    length: 0.04
+    gauge: 28 AWG
+    colors: [RD, BK]
+
+  TX_PWR:
+    wirecount: 2
+    length: 0.04
+    gauge: 28 AWG
+    colors: [RD, BK]
+
+  RX_UART:
+    wirecount: 3
+    length: 0.04
+    gauge: 28 AWG
+    colors: [YE, BK, BK]
+    notes: Receiver RO feeds XIAO UART RX; /RE and DE are tied low.
+
+  TX_UART:
+    wirecount: 3
+    length: 0.04
+    gauge: 28 AWG
+    colors: [BU, RD, RD]
+    notes: XIAO UART TX feeds transmitter DI; /RE and DE are tied high.
+
+  BMS_PAIR:
+    wirecount: 2
+    length: 0.05
+    gauge: 26 AWG
+    colors: [WH, GN]
+    category: twisted
+
+  CTRL_PAIR:
+    wirecount: 2
+    length: 0.05
+    gauge: 26 AWG
+    colors: [WH, GN]
+    category: twisted
+
+connections:
+  -
+    - BMS: [1, 2]
+    - PWR_IN: [1, 2]
+    - XIAO: [1, 2]
+
+  -
+    - XIAO: [3, 2]
+    - RX_PWR: [1, 2]
+    - RX485: [1, 2]
+
+  -
+    - XIAO: [3, 2]
+    - TX_PWR: [1, 2]
+    - TX485: [1, 2]
+
+  -
+    - XIAO: 4
+    - RX_UART: 1
+    - RX485: 3
+  -
+    - XIAO: 2
+    - RX_UART: 2
+    - RX485: 4
+  -
+    - XIAO: 2
+    - RX_UART: 3
+    - RX485: 5
+
+  -
+    - XIAO: 5
+    - TX_UART: 1
+    - TX485: 6
+  -
+    - XIAO: 3
+    - TX_UART: 2
+    - TX485: 4
+  -
+    - XIAO: 3
+    - TX_UART: 3
+    - TX485: 5
+
+  -
+    - BMS: [3, 4]
+    - BMS_PAIR: [1, 2]
+    - RX485: [7, 8]
+
+  -
+    - TX485: [7, 8]
+    - CTRL_PAIR: [1, 2]
+    - CTRL: [1, 2]

@@ -15,6 +15,7 @@ void testUninitializedGauge() {
 }
 
 void testCurrentRideSpentAndRegeneratedStats() {
+  gauge->updateVoltage(3800, 0);
   gauge->updateCurrent(6666, 0);  // The first current is disregarded
   gauge->updateCurrent(1000, 123);
   TEST_ASSERT_EQUAL(0, gauge->getMilliampSecondsRecharged());
@@ -68,7 +69,9 @@ void testSimpleChargeAndHalfwayDischarge() {
   }
   state = gauge->getState();
   TEST_ASSERT_EQUAL(43, gauge->getSoc());
-  TEST_ASSERT_EQUAL(6 * 10 * 60 * 1000, gauge->getMilliampSecondsDischarged());
+  // The first current sample after restore initializes the time baseline.
+  TEST_ASSERT_EQUAL(6 * (10 * 60 * 1000 - 100),
+                    gauge->getMilliampSecondsDischarged());
   TEST_ASSERT_EQUAL(0, gauge->getMilliampSecondsRecharged());
 }
 

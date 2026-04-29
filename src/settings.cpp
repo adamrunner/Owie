@@ -2,24 +2,28 @@
 
 #include <Esp.h>
 
-#include "EEPROM_Rotate.h"
 #include "dprint.h"
+#if defined(ARDUINO_ARCH_ESP8266)
+#include "EEPROM_Rotate.h"
+#include "nvs.h"
+#include "spi_flash_geometry.h"
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <Preferences.h>
+#endif
 #include "pb_decode.h"
 #include "pb_encode.h"
-#include "spi_flash_geometry.h"
 #include "task_queue.h"
-#include "nvs.h"
 
 namespace {
 SettingsMsg __settings = SettingsMsg_init_default;
 
 SettingsMsg DEFAULT_SETTINGS = SettingsMsg_init_default;
 
+#if defined(ARDUINO_ARCH_ESP8266)
 // 3 bytes needed by EEPROM_Rotate + 2 byte proto message size
 const size_t MAX_SETTINGS_SIZE = SPI_FLASH_SEC_SIZE - 5;
 
 EEPROM_Rotate& getEeprom() {
-  new NonVolatileStorage(0,0);
   static EEPROM_Rotate e;
   static bool initialized = false;
   if (!initialized) {
@@ -30,6 +34,21 @@ EEPROM_Rotate& getEeprom() {
   }
   return e;
 }
+#elif defined(ARDUINO_ARCH_ESP32)
+const size_t MAX_SETTINGS_SIZE = 1024;
+const char* const SETTINGS_NAMESPACE = "owie";
+const char* const SETTINGS_KEY = "settings";
+
+Preferences& getPreferences() {
+  static Preferences preferences;
+  static bool initialized = false;
+  if (!initialized) {
+    preferences.begin(SETTINGS_NAMESPACE, false);
+    initialized = true;
+  }
+  return preferences;
+}
+#endif
 }  // namespace
 
 SettingsMsg * const Settings = &__settings;
@@ -47,10 +66,23 @@ void sanitizeWifiPowerSetting() {
 }
 
 void loadSettings() {
+#if defined(ARDUINO_ARCH_ESP8266)
   auto& e = getEeprom();
   uint16_t len = *(uint16_t*)e.getConstDataPtr();
   auto istream = pb_istream_from_buffer(getEeprom().getConstDataPtr() + 2,
                                         min<uint16_t>(len, MAX_SETTINGS_SIZE));
+#elif defined(ARDUINO_ARCH_ESP32)
+  auto& preferences = getPreferences();
+  const size_t len = preferences.getBytesLength(SETTINGS_KEY);
+  if (len == 0 || len > MAX_SETTINGS_SIZE) {
+    DPRINTLN("Failed to read settings, resetting.");
+    nukeSettings();
+    return;
+  }
+  uint8_t buffer[MAX_SETTINGS_SIZE];
+  preferences.getBytes(SETTINGS_KEY, buffer, len);
+  auto istream = pb_istream_from_buffer(buffer, len);
+#endif
   if (pb_decode(&istream, &SettingsMsg_msg, Settings)) {
     DPRINTF("Read and decoded settings, size = %d bytes.", len);
     sanitizeWifiPowerSetting();
@@ -61,14 +93,23 @@ void loadSettings() {
 }
 
 int32_t saveSettings() {
+#if defined(ARDUINO_ARCH_ESP8266)
   auto& e = getEeprom();
   auto stream = pb_ostream_from_buffer(e.getDataPtr() + 2, MAX_SETTINGS_SIZE);
+#elif defined(ARDUINO_ARCH_ESP32)
+  uint8_t buffer[MAX_SETTINGS_SIZE];
+  auto stream = pb_ostream_from_buffer(buffer, MAX_SETTINGS_SIZE);
+#endif
   if (!pb_encode(&stream, &SettingsMsg_msg, Settings)) {
     DPRINTLN("Failed to encode settings.");
     return -1;
   }
+#if defined(ARDUINO_ARCH_ESP8266)
   *(int16_t*)e.getDataPtr() = (int16_t)stream.bytes_written;
   e.commit();
+#elif defined(ARDUINO_ARCH_ESP32)
+  getPreferences().putBytes(SETTINGS_KEY, buffer, stream.bytes_written);
+#endif
   DPRINTF("Serialized settings, size = %d bytes.", stream.bytes_written);
   return stream.bytes_written;
 }
@@ -79,7 +120,11 @@ int32_t saveSettingsAndRestartSoon() {
   return code;
 }
 
+#if defined(ARDUINO_ARCH_ESP8266)
 void disableFlashPageRotation() { getEeprom().rotate(false); }
+#else
+void disableFlashPageRotation() {}
+#endif
 
 void nukeSettings() {
   *Settings = DEFAULT_SETTINGS;

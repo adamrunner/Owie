@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
-#include "ESP8266WiFi.h"
 #include "bms_main.h"
 #include "dprint.h"
+#include "platform_compat.h"
 #include "recovery.h"
 #include "settings.h"
 #include "task_queue.h"
@@ -49,7 +49,7 @@ void maybeLockOnStartup() {
   }
 }
 
-extern "C" void setup() {
+void setup() {
   WiFi.persistent(false);
   loadSettings();
   // It is important to do this *BEFORE* calling isInRecoveryMode()
@@ -62,4 +62,4 @@ extern "C" void setup() {
   }
 }
 
-extern "C" void loop() { TaskQueue.process(); }
+void loop() { TaskQueue.process(); }

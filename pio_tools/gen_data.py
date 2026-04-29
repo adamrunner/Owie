@@ -1,5 +1,6 @@
 Import("env")
 import os
+import shutil
 import subprocess
 
 from SCons.Script import COMMAND_LINE_TARGETS
@@ -13,8 +14,17 @@ def ReadAndMaybeMinifyFiles(fullPath):
     if not extension in ['.html', '.js', '.css']:
         with open(fullPath, "rb") as f:
             return f.read()
+    minifier = shutil.which("html-minifier-terser")
+    if not minifier:
+        localMinifier = os.path.join(env["PROJECT_DIR"], "node_modules", ".bin", "html-minifier-terser")
+        if os.path.exists(localMinifier):
+            minifier = localMinifier
+    if not minifier:
+        print("html-minifier-terser not found, embedding '%s' unminified" % fullPath)
+        with open(fullPath, "rb") as f:
+            return f.read()
     originalSize = os.stat(fullPath).st_size
-    result = subprocess.run(['html-minifier-terser',
+    result = subprocess.run([minifier,
                            '--collapse-whitespace',
                            '--remove-comments',
                            '--minify-js',
@@ -22,6 +32,7 @@ def ReadAndMaybeMinifyFiles(fullPath):
                            '--minify-css',
                            'true',
                            fullPath], stdout=subprocess.PIPE)
+    result.check_returncode()
     minifiedContent = result.stdout
     print("Minified '%s' with from %d to %d bytes" % (fullPath, originalSize, len(minifiedContent)))
     return minifiedContent
