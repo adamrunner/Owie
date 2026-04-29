@@ -6,7 +6,8 @@
 - Added ESP8266/ESP32 compatibility helpers.
 - Ported ESP32 settings storage to `Preferences`.
 - Moved ESP32 BMS UART traffic to `HardwareSerial(1)`.
-- Kept the original interrupt-based inverse-TX relay path available for now.
+- Added `OWIE_USE_RS485_TRANSCEIVER` to bypass the inverse-TX GPIO path when
+  using external RS485 transceivers.
 - Added a WireViz wiring diagram for a dual 3.3V SP3485 RS485-transceiver install.
 - Verified native tests plus ESP8266 and XIAO ESP32-S3 builds.
 
@@ -22,9 +23,9 @@
    - If using inverse-TX mode, confirm GPIO6 / D5 can mirror inverted TX cleanly.
 
 3. If using RS485 transceivers, add a firmware mode for them.
-   - Add `OWIE_USE_RS485_TRANSCEIVER`.
-   - Skip `TX_INPUT_PIN` interrupt setup in transceiver mode.
-   - Keep UART relay logic unchanged.
+   - Done: `OWIE_USE_RS485_TRANSCEIVER` is enabled for the XIAO ESP32-S3 env.
+   - Done: `TX_INPUT_PIN` interrupt setup is skipped in transceiver mode.
+   - Done: UART relay logic is unchanged.
 
 4. Measure physical fit before soldering.
    - Measure available length, width, and height inside the Pint controller box.

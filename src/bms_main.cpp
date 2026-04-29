@@ -9,7 +9,9 @@
 
 // UART RX is connected to the *BMS* White line
 // UART TX is connected to the *MB* White line
+#ifndef OWIE_USE_RS485_TRANSCEIVER
 // TX_INPUT_PIN must be soldered to the UART TX
+#endif
 #if defined(ARDUINO_ARCH_ESP32)
 #ifndef BMS_UART_RX_PIN
 #define BMS_UART_RX_PIN 44
@@ -17,24 +19,30 @@
 #ifndef BMS_UART_TX_PIN
 #define BMS_UART_TX_PIN 43
 #endif
+#ifndef OWIE_USE_RS485_TRANSCEIVER
 #ifndef TX_INPUT_PIN
 #define TX_INPUT_PIN BMS_UART_TX_PIN
 #endif
 #ifndef TX_INVERSE_OUT_PIN
 #define TX_INVERSE_OUT_PIN 6
 #endif
+#endif
 #else
+#ifndef OWIE_USE_RS485_TRANSCEIVER
 #define TX_INPUT_PIN 4
 // Connected to the MB B line
 #define TX_INVERSE_OUT_PIN 5
 #endif
+#endif
 
 namespace {
 
+#ifndef OWIE_USE_RS485_TRANSCEIVER
 // Emulate the RS485 B line by bitbanging the inverse
 // of the TX A line.
 void IRAM_ATTR txPinRiseInterrupt() { digitalWrite(TX_INVERSE_OUT_PIN, 0); }
 void IRAM_ATTR txPinFallInterrupt() { digitalWrite(TX_INVERSE_OUT_PIN, 1); }
+#endif
 
 #ifdef NO_GLOBAL_INSTANCES
 HardwareSerial Serial(0);
@@ -63,19 +71,23 @@ void bms_setup() {
   BmsSerial.begin(115200);
 #endif
 
+#ifndef OWIE_USE_RS485_TRANSCEIVER
   // The B line idle is 0
   digitalWrite(TX_INVERSE_OUT_PIN, 0);
   pinMode(TX_INVERSE_OUT_PIN, OUTPUT);
 
   pinMode(TX_INPUT_PIN, INPUT);
+#endif
 #ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
 #endif
 
+#ifndef OWIE_USE_RS485_TRANSCEIVER
   attachInterrupt(digitalPinToInterrupt(TX_INPUT_PIN), txPinRiseInterrupt,
                   RISING);
   attachInterrupt(digitalPinToInterrupt(TX_INPUT_PIN), txPinFallInterrupt,
                   FALLING);
+#endif
 
   relay->addReceivedPacketCallback([](BmsRelay *, Packet *packet) {
 #ifdef LED_BUILTIN
